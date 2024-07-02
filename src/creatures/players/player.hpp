@@ -850,8 +850,8 @@ public:
 	void onWalkComplete() override;
 
 	void stopWalk();
-	bool openShopWindow(std::shared_ptr<Npc> npc);
-	bool closeShopWindow(bool sendCloseShopWindow = true);
+	bool openShopWindow(std::shared_ptr<Npc> npc, const std::vector<ShopBlock> &shopItems = {});
+	bool closeShopWindow();
 	bool updateSaleShopList(std::shared_ptr<Item> item);
 	bool hasShopItemForSale(uint16_t itemId, uint8_t subType) const;
 
@@ -1314,6 +1314,9 @@ public:
 	void onCreatureAppear(std::shared_ptr<Creature> creature, bool isLogin) override;
 	void onRemoveCreature(std::shared_ptr<Creature> creature, bool isLogout) override;
 	void onCreatureMove(const std::shared_ptr<Creature> &creature, const std::shared_ptr<Tile> &newTile, const Position &newPos, const std::shared_ptr<Tile> &oldTile, const Position &oldPos, bool teleport) override;
+
+	void onEquipInventory();
+	void onDeEquipInventory();
 
 	void onAttackedCreatureDisappear(bool isLogout) override;
 	void onFollowCreatureDisappear(bool isLogout) override;
@@ -1953,7 +1956,7 @@ public:
 	bool isImmuneCleanse(ConditionType_t conditiontype) {
 		uint64_t timenow = OTSYS_TIME();
 		if ((cleanseCondition.first == conditiontype)
-			&& (timenow <= cleanseCondition.second)) {
+		    && (timenow <= cleanseCondition.second)) {
 			return true;
 		}
 		return false;
@@ -2151,7 +2154,7 @@ public:
 		if (auto it = std::find_if(preys.begin(), preys.end(), [slotid](const std::unique_ptr<PreySlot> &preyIt) {
 				return preyIt->id == slotid;
 			});
-			it != preys.end()) {
+		    it != preys.end()) {
 			return *it;
 		}
 
@@ -2218,7 +2221,7 @@ public:
 		if (auto it = std::find_if(preys.begin(), preys.end(), [raceId](const std::unique_ptr<PreySlot> &it) {
 				return it->selectedRaceId == raceId;
 			});
-			it != preys.end()) {
+		    it != preys.end()) {
 			return *it;
 		}
 
@@ -2249,7 +2252,7 @@ public:
 		if (auto it = std::find_if(taskHunting.begin(), taskHunting.end(), [slotid](const std::unique_ptr<TaskHuntingSlot> &itTask) {
 				return itTask->id == slotid;
 			});
-			it != taskHunting.end()) {
+		    it != taskHunting.end()) {
 			return *it;
 		}
 
@@ -2318,7 +2321,7 @@ public:
 		if (auto it = std::find_if(taskHunting.begin(), taskHunting.end(), [raceId](const std::unique_ptr<TaskHuntingSlot> &itTask) {
 				return itTask->selectedRaceId == raceId;
 			});
-			it != taskHunting.end()) {
+		    it != taskHunting.end()) {
 			return *it;
 		}
 
@@ -2559,8 +2562,7 @@ public:
 	}
 
 	bool checkAutoLoot(bool isBoss) const {
-		const bool autoLoot = g_configManager().getBoolean(AUTOLOOT, __FUNCTION__);
-		if (!autoLoot) {
+		if (!g_configManager().getBoolean(AUTOLOOT, __FUNCTION__)) {
 			return false;
 		}
 		if (g_configManager().getBoolean(VIP_SYSTEM_ENABLED, __FUNCTION__) && g_configManager().getBoolean(VIP_AUTOLOOT_VIP_ONLY, __FUNCTION__) && !isVip()) {
@@ -2568,18 +2570,13 @@ public:
 		}
 
 		auto featureKV = kv()->scoped("features")->get("autoloot");
-		if (featureKV.has_value()) {
-			auto value = featureKV->getNumber();
-			if (value == 2) {
-				return true;
-			} else if (value == 1) {
-				return !isBoss;
-			} else if (value == 0) {
-				return false;
-			}
+		auto value = featureKV.has_value() ? featureKV->getNumber() : 0;
+		if (value == 2) {
+			return true;
+		} else if (value == 1) {
+			return !isBoss;
 		}
-
-		return true;
+		return false;
 	}
 
 	QuickLootFilter_t getQuickLootFilter() const {
